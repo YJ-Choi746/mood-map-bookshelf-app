@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+:root {
+  --font-serif: "Nanum Myeongjo", "Noto Serif KR", Georgia, serif;
+  --font-sans: "Gothic A1", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --bg: #F3F1F6;
+  --surface: #FFFFFF;
+  --ink: #1F2433;
+  --muted: #646A7A;
+  --line: #D6D3DE;
+  --warm: #F2B48C;
+  --cool: #8FA9D6;
+  --calm: #A8CDB8;
+  --heavy: #7C7397;
+  --wood: #B88B63;
+  --wood-dark: #8A6444;
+  --ai: #5B4FB0;
+  --ai-soft: #E6E2F7;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg);
+  color: var(--ink);
+}
+
+.font-serif-kr {
+  font-family: var(--font-serif);
+}
+
+.font-sans-kr {
+  font-family: var(--font-sans);
+}
+
+.writing-vertical {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+}
+
+@keyframes dots {
+  0% { content: ""; }
+  25% { content: "."; }
+  50% { content: ".."; }
+  75% { content: "..."; }
+}
+
+.dots-thinking::after {
+  content: "";
+  display: inline-block;
+  width: 1.2em;
+  text-align: left;
+  animation: dots 1.2s steps(4) infinite;
+}

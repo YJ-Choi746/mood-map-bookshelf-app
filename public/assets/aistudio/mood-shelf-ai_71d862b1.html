@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>마음 지도 책장 (AI 버전)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&family=Gothic+A1:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F3F1F6; --surface:#FFFFFF; --ink:#1F2433; --muted:#646A7A; --line:#D6D3DE;
+  --warm:#F2B48C; --cool:#8FA9D6; --calm:#A8CDB8; --heavy:#7C7397;
+  --wood:#B88B63; --wood-dark:#8A6444; --ai:#5B4FB0; --ai-soft:#E6E2F7;
+  --serif:"Nanum Myeongjo","Noto Serif KR",serif;
+  --sans:"Gothic A1","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  color-scheme:light; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#16181F; --surface:#20232D; --ink:#E8E9EF; --muted:#A1A6B5; --line:#363A48;
+    --warm:#B9775A; --cool:#4F6896; --calm:#4F7F67; --heavy:#4A4363; --wood:#6E5038; --wood-dark:#4F3926;
+    --ai:#B3A9F0; --ai-soft:#2E2A48; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#16181F; --surface:#20232D; --ink:#E8E9EF; --muted:#A1A6B5; --line:#363A48;
+  --warm:#B9775A; --cool:#4F6896; --calm:#4F7F67; --heavy:#4A4363; --wood:#6E5038; --wood-dark:#4F3926;
+  --ai:#B3A9F0; --ai-soft:#2E2A48; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6}
+main{max-width:30rem;margin:0 auto;padding:2.5rem 1.25rem 4rem}
+h1{font-family:var(--serif);font-weight:800;font-size:clamp(1.6rem,6vw,2.1rem);line-height:1.35;margin:0 0 1.25rem}
+
+/* tabs */
+
+.ask label{display:block;font-size:.9rem;color:var(--muted);margin:1.5rem 0 .4rem}
+.row{display:flex;gap:.5rem}
+#kw{flex:1;min-width:0;font:inherit;font-size:1.05rem;padding:.75rem .9rem;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink)}
+#kw:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.btn{font:inherit;font-weight:700;background:var(--ink);color:var(--bg);border:0;border-radius:12px;padding:.75rem 1.1rem;cursor:pointer;white-space:nowrap}
+.btn.send{background:var(--ai);color:#fff}
+.btn:disabled{opacity:.4;cursor:default}
+.btn:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+.sub{color:var(--muted);margin:1rem 0 .5rem;font-size:.9rem}
+
+/* map */
+.mapwrap{position:relative;padding:1.6rem 0}
+.axis{position:absolute;font-size:.78rem;color:var(--muted);white-space:nowrap}
+.ax-top{top:0;left:50%;transform:translateX(-50%)}
+.ax-bot{bottom:0;left:50%;transform:translateX(-50%)}
+.ax-l{left:.6rem;top:50%;transform:translateY(-50%);z-index:1;color:#1F2433;opacity:.6}
+.ax-r{right:.6rem;top:50%;transform:translateY(-50%);z-index:1;color:#1F2433;opacity:.6}
+#map{position:relative;aspect-ratio:1;width:100%;border-radius:22px;cursor:crosshair;touch-action:none;outline:none;overflow:hidden;
+  background:
+    radial-gradient(circle at 0% 0%, var(--warm) 0%, transparent 55%),
+    radial-gradient(circle at 100% 0%, #F4D77F 0%, transparent 55%),
+    radial-gradient(circle at 0% 100%, var(--heavy) 0%, transparent 60%),
+    radial-gradient(circle at 100% 100%, var(--calm) 0%, transparent 60%),
+    var(--cool);}
+#map{cursor:default}
+#map::before,#map::after{content:"";position:absolute;background:rgba(255,255,255,.35)}
+#map::before{left:50%;top:0;bottom:0;width:1px}
+#map::after{top:50%;left:0;right:0;height:1px}
+#map:focus-visible{box-shadow:0 0 0 3px var(--ink)}
+.tag{position:absolute;transform:translate(-50%,-50%);font-size:.82rem;color:#1F2433;opacity:.55;pointer-events:none}
+.tag.on{opacity:1;font-weight:700}
+#dot{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:#fff;border:3px solid #1F2433;box-shadow:0 2px 10px rgba(0,0,0,.25);pointer-events:none;display:none;transition:left .5s ease,top .5s ease}
+#dot{border-color:var(--ai);background:#fff}
+@media (prefers-reduced-motion:reduce){#dot{transition:none}}
+.now{font-family:var(--serif);font-size:1.1rem;margin:.75rem 0 0;min-height:1.8em}
+.now b{font-weight:800}
+
+/* results */
+#out{margin-top:2.5rem}
+#out[hidden],[hidden]{display:none!important}
+.trace{margin:0 0 1.25rem;padding-left:1.4rem;color:var(--muted);font-size:.88rem}
+.trace li{margin:.15rem 0}
+.trace b{color:var(--ink);font-weight:500}
+.meta{display:grid;grid-template-columns:auto 1fr;gap:.35rem 1rem;margin:0 0 1.5rem;padding:1rem 1.2rem;background:var(--surface);border:1px solid var(--line);border-radius:12px;font-size:.95rem}
+.meta dt{color:var(--muted)}
+.meta dd{margin:0;font-weight:700}
+.meta{border-color:var(--ai);border-width:1.5px}
+.lead{font-family:var(--serif);font-size:1.1rem;line-height:1.75;margin:0 0 1.5rem}
+.status{font-size:.95rem;color:var(--muted);padding:1rem 1.2rem;border:1px dashed var(--line);border-radius:12px}
+.status.thinking::after{content:"";display:inline-block;width:1.2em;text-align:left;animation:dots 1.2s steps(4) infinite}
+@keyframes dots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}
+
+.shelf{display:flex;justify-content:center;align-items:flex-end;gap:.6rem;height:15rem;padding:0 1rem;border-bottom:14px solid var(--wood);position:relative}
+.shelf::after{content:"";position:absolute;left:0;right:0;bottom:-20px;height:6px;background:var(--wood-dark);border-radius:0 0 4px 4px}
+.spine{all:unset;cursor:pointer;width:3.6rem;border-radius:4px 4px 1px 1px;writing-mode:vertical-rl;text-orientation:upright;
+  font-family:var(--serif);font-weight:700;font-size:.95rem;letter-spacing:.05em;color:#fff;display:flex;align-items:center;
+  padding:.9rem 0;overflow:hidden;box-shadow:inset -6px 0 0 rgba(0,0,0,.12),inset 2px 0 0 rgba(255,255,255,.18);transition:transform .25s ease}
+.spine span{max-height:100%;overflow:hidden;margin:0 auto}
+.spine.sel{transform:translateY(-1.4rem)}
+.spine:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+@media (prefers-reduced-motion:reduce){.spine{transition:none}}
+.card{background:var(--surface);border-radius:16px;padding:1.4rem 1.4rem 1.5rem;margin-top:2.2rem;border:1px solid var(--line)}
+.card h2{font-family:var(--serif);font-weight:800;font-size:1.35rem;margin:0;line-height:1.4}
+.card .au{color:var(--muted);font-size:.9rem;margin:.2rem 0 .9rem}
+.card p.why{margin:0}
+.pick{color:var(--muted);font-size:.85rem;text-align:center;margin:.9rem 0 0}
+.note{color:var(--muted);font-size:.8rem;margin-top:3rem}
+
+.conn{margin:1rem 0 0;padding:.9rem 1.1rem;border-radius:12px;background:var(--ai-soft);font-size:.9rem}
+.conn p{margin:0}
+.conn .row{margin-top:.6rem}
+.conn input{flex:1;min-width:0;font:inherit;font-size:.9rem;padding:.55rem .75rem;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink)}
+.conn .btn{padding:.55rem .9rem;font-size:.9rem}
+.conn small{display:block;color:var(--muted);margin-top:.5rem}
+.desc{font-size:.92rem;color:var(--muted);margin:0}
+#map{cursor:default}
+</style>
+</head>
+<body>
+<main>
+  <h1>지금 마음은 어디쯤인가요?</h1>
+  <p class="desc">AI가 문장 전체의 맥락을 읽고 감정, 강도, 지도 위치를 판단한 뒤 상황에 맞는 책 3권을 골라요.</p>
+
+  <!-- AI 연결 상태: claude.ai에서 열면 자동 연결, 그 밖에서는 API 키 입력 -->
+  <div class="conn" id="conn">
+    <p id="connMsg">AI 연결을 확인하고 있어요…</p>
+    <div id="keyBox" hidden>
+      <div class="row"><input id="apiKey" type="password" placeholder="Anthropic API 키 (sk-ant-...)" autocomplete="off" aria-label="Anthropic API 키"><button class="btn" id="saveKey" type="button">연결</button></div>
+      <small>키는 이 페이지를 닫으면 사라지고, 어디에도 저장되지 않아요. 직접 쓰는 테스트용으로만 넣어 주세요.</small>
+    </div>
+  </div>
+
+  <form id="f" class="ask" autocomplete="off">
+    <label for="kw">지금 기분을 한 줄로 적어 보세요</label>
+    <div class="row"><input id="kw" type="text" placeholder="발표 앞두고 불안해" maxlength="120"><button class="btn send" id="send" type="submit" disabled>AI에게 묻기</button></div>
+  </form>
+  <p class="sub">AI가 문장을 읽고 아래 지도에 직접 점을 찍어요. 위로 갈수록 에너지가 높고, 오른쪽으로 갈수록 편안한 감정이에요.</p>
+
+  <div class="mapwrap">
+    <span class="axis ax-top">에너지 높음</span>
+    <span class="axis ax-bot">에너지 낮음</span>
+    <span class="axis ax-l">불편함</span>
+    <span class="axis ax-r">편안함</span>
+    <div id="map" role="img" aria-label="마음 지도. AI가 판단한 감정 위치가 점으로 표시돼요."><div id="dot"></div></div>
+  </div>
+  <p class="now" id="now" aria-live="polite">아직 점이 없어요.</p>
+
+  <section id="out" hidden aria-live="polite">
+    <div id="info"></div>
+    <div id="hit" hidden>
+      <p class="lead" id="lead"></p>
+      <div class="shelf" id="shelf" role="tablist" aria-label="추천 책"></div>
+      <div class="card" id="card" role="tabpanel"></div>
+      <p class="pick">책등을 눌러 다른 책도 꺼내 보세요.</p>
+    </div>
+  </section>
+
+  <p class="note">책은 AI가 그때그때 고른 결과라 매번 달라질 수 있어요. 실제 서비스에 쓰기 전에 서지 정보를 한 번 확인해 주세요.</p>
+</main>
+
+<script>
+/* ============================================================
+   1. 기본 감정 데이터: 지도 위 위치와 책등 색만 정해 둠
+      (책 목록은 없음. 책은 AI가 고름)
+   ============================================================ */
+const BASE = [
+  {name:"분노",   x:-.8,  y:.7,   color:["#B4473A","#8E3A30","#C9634F"]},
+  {name:"두려움", x:-.25, y:.8,   color:["#3F5C7A","#5B4A73","#2F6B6A"]},
+  {name:"불안",   x:-.6,  y:.25,  color:["#6A5B8C","#4D6A86","#7C6A55"]},
+  {name:"기쁨",   x:.7,   y:.6,   color:["#D9822B","#C4556B","#4E8F5A"]},
+  {name:"평온",   x:.65,  y:-.6,  color:["#4E7D66","#6B8A4E","#5A7486"]},
+  {name:"그리움", x:.25,  y:-.3,  color:["#8A6A9E","#A0705A","#5F7FA3"]},
+  {name:"후회",   x:-.4,  y:-.15, color:["#6E6250","#4F5F70","#7D5560"]},
+  {name:"슬픔",   x:-.8,  y:-.45, color:["#3E5675","#5A4E6E","#41667A"]},
+  {name:"무기력", x:-.45, y:-.85, color:["#5C5A66","#706352","#4F6560"]},
+  {name:"외로움", x:0,    y:-.65, color:["#4B6584","#7A6A8C","#5E7A72"]}
+];
+const BASES = BASE.map(b=>b.name);
+
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const $=id=>document.getElementById(id);
+const map=$("map"), dot=$("dot"), now=$("now"), out=$("out"), info=$("info"), hit=$("hit"),
+      shelf=$("shelf"), card=$("card"), lead=$("lead"), kw=$("kw"), send=$("send");
+const toPct=(v,inv)=>((inv?-v:v)+1)/2*100;
+const clamp=v=>Math.max(-1,Math.min(1,Number(v)||0));
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ============================================================
+   2. 지도: 감정 이름 표시 + AI가 정한 좌표에 점 찍기
+   ============================================================ */
+const tags={};
+BASE.forEach(e=>{
+  const s=document.createElement("span");
+  s.className="tag"; s.textContent=e.name;
+  s.style.left=toPct(e.x)+"%"; s.style.top=toPct(e.y,true)+"%";
+  map.appendChild(s); tags[e.name]=s;
+});
+let onTag=null;
+function place(x,y,baseName,label){
+  x=clamp(x); y=clamp(y);
+  dot.style.display="block"; dot.style.left=toPct(x)+"%"; dot.style.top=toPct(y,true)+"%";
+  if(onTag) onTag.classList.remove("on");
+  onTag=tags[baseName]; onTag?.classList.add("on");
+  now.innerHTML=label;
+}
+
+/* ============================================================
+   3. 출력: 책장과 책 카드
+   ============================================================ */
+let books=[];
+function select(i){
+  [...shelf.children].forEach((b,j)=>{b.classList.toggle("sel",i===j);b.setAttribute("aria-selected",i===j);b.tabIndex=i===j?0:-1;});
+  const b=books[i];
+  card.innerHTML=`<h2>『${esc(b.t)}』</h2><p class="au">${esc(b.a)}</p><p class="why">${esc(b.w)}</p>`;
+}
+function renderShelf(leadText,bks,cols){
+  books=bks; lead.textContent=leadText; shelf.innerHTML="";
+  const h=[92,100,86];
+  bks.forEach((b,i)=>{
+    const s=document.createElement("button");
+    s.className="spine"; s.type="button"; s.setAttribute("role","tab");
+    s.style.height=h[i%3]+"%"; s.style.background=cols[i%cols.length];
+    s.innerHTML=`<span>${esc(b.t)}</span>`;
+    s.setAttribute("aria-label",`${b.t}, ${b.a}`);
+    s.addEventListener("click",()=>select(i));
+    s.addEventListener("keydown",ev=>{const d={ArrowLeft:-1,ArrowRight:1}[ev.key];if(d){ev.preventDefault();const n=(i+d+bks.length)%bks.length;select(n);shelf.children[n].focus();}});
+    shelf.appendChild(s);
+  });
+  hit.hidden=false; select(0);
+}
+const meta=rows=>`<dl class="meta">${rows.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>`;
+
+/* ============================================================
+   4. ★ 프롬프트(지시문) ★
+      사용자 문장(q)을 끼워 넣어 AI에게 보낼 지시문을 만듦
+   ============================================================ */
+function aiPrompt(q){
+  return `너는 감정 기반 도서 추천 서비스의 엔진이야. 사용자가 지금 기분을 한 줄로 적었어.
+
+사용자 문장: """${q}"""
+
+할 일:
+1. 문장 전체의 맥락(상황, 부정 표현, 여러 감정이 섞였는지)을 읽고 핵심 감정을 판단해.
+2. 그 감정을 감정 지도 위 좌표로 표시해. x는 -1(불편함)~1(편안함), y는 -1(에너지 낮음)~1(에너지 높음).
+3. 이 사람의 상황에 맞는 책 3권을 골라. 한국어판이 실제로 출간된 책만 고르고, 제목과 저자가 확실하지 않은 책은 고르지 마.
+
+아래 형식의 JSON만 출력해. 다른 말은 쓰지 마.
+{
+ "emotion": "핵심 감정을 2~8자 한국어로 (예: 발표 전 긴장)",
+ "base": "${BASES.join(" | ")} 중 가장 가까운 하나. 감정을 읽을 수 없는 문장이면 null",
+ "mixed": "섞인 다른 감정이 있으면 한 단어, 없으면 null",
+ "intensity": "살짝 | 꽤 | 아주",
+ "evidence": ["판단 근거가 된 원문 표현 1~3개, 원문 그대로"],
+ "x": 0.0,
+ "y": 0.0,
+ "reading": "상황과 감정을 어떻게 이해했는지 다정한 해요체로 1~2문장",
+ "books": [{"t":"한국어판 제목","a":"저자","w":"이 사람의 상황에 맞춘 추천 이유 1문장, 해요체"}]
+}`;
+}
+
+/* ============================================================
+   5. ★ API 연결 ★
+      경로 A: claude.ai에 게시된 페이지 → claude.use("sample") (키 필요 없음)
+      경로 B: 그 밖(내 컴퓨터에서 열기 등) → Anthropic API에 직접 요청 (API 키 필요)
+   ============================================================ */
+let sample=null, apiKey="", aiCtl=null;
+const MODEL="claude-sonnet-5-5";
+
+// 경로 B: Anthropic Messages API 직접 호출
+async function callAnthropic(prompt,signal){
+  const res=await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST", signal,
+    headers:{
+      "content-type":"application/json",
+      "x-api-key":apiKey,
+      "anthropic-version":"2023-06-01",
+      "anthropic-dangerous-direct-browser-access":"true"
+    },
+    body:JSON.stringify({model:MODEL,max_tokens:1500,messages:[{role:"user",content:prompt}]})
+  });
+  if(!res.ok){
+    const err=new Error("http "+res.status);
+    err.code=res.status===401?"bad_key":res.status===429?"rate_limited":"upstream_error";
+    throw err;
+  }
+  const data=await res.json();
+  const text=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+  try{ return JSON.parse(text.replace(/```json|```/g,"").trim()); }
+  catch{ const e=new Error("json"); e.code="invalid_json"; throw e; }
+}
+
+// 두 경로 중 연결된 쪽으로 프롬프트 보내기
+async function askAI(prompt,signal){
+  if(sample) return sample.json(prompt,{signal});   // 경로 A
+  if(apiKey) return callAnthropic(prompt,signal);   // 경로 B
+  const e=new Error("no connection"); e.code="no_connection"; throw e;
+}
+
+function setConn(msg,showKey){
+  $("connMsg").textContent=msg; $("keyBox").hidden=!showKey;
+  send.disabled=!(sample||apiKey);
+}
+$("saveKey").addEventListener("click",()=>{
+  const k=$("apiKey").value.trim();
+  if(!k){$("apiKey").focus();return;}
+  apiKey=k; $("apiKey").value="";
+  setConn("API 키로 연결했어요. 이제 문장을 입력해 보세요.",false);
+});
+(async()=>{
+  try{ sample=await window.claude?.use?.("sample")||null; }catch{ sample=null; }
+  if(sample) setConn("claude.ai의 AI와 연결됐어요. 처음 물을 때 사용 허용을 한 번 물어봐요.",false);
+  else setConn("claude.ai 밖에서 열려서 자동 연결이 안 돼요. 테스트하려면 Anthropic API 키를 넣어 주세요.",true);
+})();
+
+/* ============================================================
+   6. 처리 과정 표시 + 오류 문구
+   ============================================================ */
+function aiTrace(q,step,d){
+  const s=n=>n<step?"✅":n===step?"⏳":"";
+  return `<ol class="trace" aria-label="처리 과정">
+    <li>입력 받기 <b>“${esc(q.trim())}”</b></li>
+    <li>문장 전체를 AI에게 보내기 ${s(2)}</li>
+    <li>AI가 맥락 읽기 ${d?`→ 근거 표현 ${(d.evidence||[]).map(e=>`<b>“${esc(e)}”</b>`).join(", ")||"없음"} ✅`:s(3)}</li>
+    <li>AI가 지도 위치와 책 3권 고르기 ${d?"✅":""}</li>
+  </ol>`;
+}
+const ERR={
+  not_granted:"AI 사용을 허용하지 않아서 추천을 만들 수 없어요.",
+  rate_limited:"요청이 많아 잠시 쉬어야 해요. 조금 뒤에 다시 눌러 주세요.",
+  invalid_json:"AI의 답을 읽지 못했어요. 한 번 더 눌러 주세요.",
+  refused:"이 문장으로는 추천을 만들 수 없어요. 다른 표현으로 적어 주세요.",
+  bad_key:"API 키가 맞지 않아요. 키를 확인하고 다시 연결해 주세요.",
+  no_connection:"AI가 연결되지 않았어요. 위에서 연결을 먼저 해 주세요."
+};
+
+/* ============================================================
+   7. 메인 흐름: 입력 → AI 호출 → 검증 → 출력
+   ============================================================ */
+async function renderAI(q){
+  aiCtl?.abort(); aiCtl=new AbortController();
+  send.disabled=true; hit.hidden=true;
+  info.innerHTML=aiTrace(q,2)+`<p class="status thinking">AI가 문장을 읽고 있어요</p>`;
+  out.hidden=false; out.scrollIntoView({behavior:reduce?"auto":"smooth",block:"start"});
+  try{
+    // ▶ API 호출: 프롬프트를 AI에게 보내고, 답을 JSON으로 받기
+    const d=await askAI(aiPrompt(q),aiCtl.signal);
+
+    // ▶ 응답 검증
+    if(!d||!d.base||!BASES.includes(d.base)){
+      info.innerHTML=aiTrace(q,5,d||{})+meta([["감정","읽을 수 없음"]])+`<p>감정이 담긴 문장으로 다시 적어 보세요. 예: “요즘 아무것도 하기 싫어”</p>`;
+      return;
+    }
+    const base=BASE.find(x=>x.name===d.base);
+    const bks=(Array.isArray(d.books)?d.books:[]).filter(b=>b&&b.t).slice(0,3)
+      .map(b=>({t:String(b.t),a:String(b.a||""),w:String(b.w||"")}));
+
+    // ▶ 출력
+    place(d.x,d.y,base.name,`AI가 찍은 위치: <b>${esc(d.intensity||"")} ${esc(d.emotion||d.base)}</b>`);
+    info.innerHTML=aiTrace(q,5,d)+meta([
+      ["감정",esc(d.emotion||d.base)],
+      ["가까운 기본 감정",esc(d.base)+(d.mixed?` (+ ${esc(d.mixed)})`:"")],
+      ["강도",esc(d.intensity||"-")],
+      ["인식한 표현",(d.evidence||[]).map(e=>`“${esc(e)}”`).join(", ")||"-"]
+    ]);
+    if(bks.length) renderShelf(d.reading||"",bks,base.color);
+  }catch(e){
+    if(e?.code==="cancelled"||e?.name==="AbortError") return;
+    info.innerHTML=aiTrace(q,2)+`<p class="status">${ERR[e?.code]||"AI 응답을 받지 못했어요. 잠시 뒤 다시 눌러 주세요."}</p>`;
+    if(e?.code==="not_granted") sample=null;
+    if(e?.code==="bad_key"){ apiKey=""; setConn("API 키를 다시 넣어 주세요.",true); }
+  }finally{
+    send.disabled=!(sample||apiKey);
+  }
+}
+
+$("f").addEventListener("submit",ev=>{
+  ev.preventDefault();
+  const q=kw.value;
+  if(!q.trim()){kw.focus();return;}
+  renderAI(q);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+{
+  "name": "마음 지도 책장 (Mood Map Bookshelf)",
+  "description": "감정과 기분을 2차원 마인드 맵에 시각화하고, Gemini AI가 문장 맥락을 읽어 맞춤 도서 3권을 따뜻한 추천 글과 함께 골라주는 감정 도서관",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
